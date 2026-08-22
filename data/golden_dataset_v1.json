@@ -1,0 +1,63 @@
+{
+  "dataset_version": "v1",
+  "created_at": "2026-08-16T00:00:00Z",
+  "description": "Hand-labeled golden dataset for the support email classifier. Seeded manually; expand over time by adding real failure cases the model gets wrong.",
+  "cases": [
+    {
+      "id": "case_001",
+      "input": "Hi, I was charged $49.99 twice on my card this month for the Pro plan. Can you refund the duplicate charge? My account email is on file.",
+      "expected_category": "billing",
+      "expected_summary": "Customer was double-charged for their Pro plan subscription and wants a refund.",
+      "difficulty": "easy",
+      "notes": "Clear-cut billing case with an explicit ask. Baseline sanity check — if this fails, something is fundamentally broken."
+    },
+    {
+      "id": "case_002",
+      "input": "the app keeps crashing when i open the reports tab, happens every single time, using android",
+      "expected_category": "technical",
+      "expected_summary": "The app consistently crashes when the customer opens the reports tab on Android.",
+      "difficulty": "easy",
+      "notes": "Lowercase, no punctuation, informal tone — checks the model isn't relying on formatting cues."
+    },
+    {
+      "id": "case_003",
+      "input": "great, another update that breaks everything. thanks a lot",
+      "expected_category": "technical",
+      "expected_summary": "Customer is frustrated that a recent update introduced new problems.",
+      "difficulty": "hard",
+      "notes": "Sarcastic tone with no explicit description of the bug. Tests whether the model reads past sentiment to intent, or gets confused and tags it as 'general' feedback."
+    },
+    {
+      "id": "case_004",
+      "input": "cant login again. also billed wrong last week too",
+      "expected_category": "account",
+      "expected_summary": "Customer cannot log in and separately mentions a billing issue from last week.",
+      "difficulty": "hard",
+      "notes": "Two issues in one email (account + billing). Expected category picks the PRIMARY/first-stated issue — decide this rule yourself and apply it consistently across all multi-issue cases."
+    },
+    {
+      "id": "case_005",
+      "input": "hola, no puedo cambiar mi contraseña, el enlace de recuperación no funciona",
+      "expected_category": "account",
+      "expected_summary": "Customer cannot change their password because the recovery link isn't working.",
+      "difficulty": "hard",
+      "notes": "Non-English input (Spanish). Tests whether classification and summarization both hold up across languages."
+    },
+    {
+      "id": "case_006",
+      "input": "just wanted to say the new dashboard redesign looks really clean, nice work",
+      "expected_category": "general",
+      "expected_summary": "Customer is giving positive feedback about the new dashboard redesign.",
+      "difficulty": "easy",
+      "notes": "No issue at all — pure feedback. Checks the model doesn't force everything into billing/technical/account."
+    },
+    {
+      "id": "case_007",
+      "input": "?",
+      "expected_category": "general",
+      "expected_summary": "Customer sent an email with no discernible content or request.",
+      "difficulty": "hard",
+      "notes": "Extreme edge case: near-empty input. Decide in advance how you WANT this handled, then check if the model agrees. This is a case worth revisiting after your first few eval runs."
+    }
+  ]
+}
