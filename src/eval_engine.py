@@ -32,9 +32,14 @@ from .schema import (
     GoldenDataset,
     PromptConfig,
     RunComparison,
+    ScoreRegressionCase,
 )
 
 load_dotenv()
+
+# Judge mode configuration: "gpt4o" | "slm_jury"
+# NOTE/TODO: JUDGE_MODE should stay "gpt4o" until validate_jury_agreement.py has been run and agreement numbers reviewed.
+JUDGE_MODE = os.environ.get("JUDGE_MODE", "gpt4o")
 
 _client = AsyncOpenAI(
     api_key=os.environ.get("GROQ_API_KEY"),
@@ -221,12 +226,45 @@ def compare_runs(
 
     regressions = []
     improvements = []
+    score_regressions = []
+    score_improvements = []
+    score_deltas = []
 
     for c in current.case_scores:
         prev = previous_by_id.get(c.case_id)
         if prev is None:
             continue  # case is new since the last run, nothing to diff
 
+        # Score delta on 1-4 scale: delta < 0 is flagged as a regression
+        delta = c.summary_relevance_score - prev.summary_relevance_score
+        score_deltas.append(delta)
+
+        if delta < 0:
+            score_regressions.append(
+                ScoreRegressionCase(
+                    case_id=c.case_id,
+                    input=c.input,
+                    previous_score=prev.summary_relevance_score,
+                    current_score=c.summary_relevance_score,
+                    score_delta=delta,
+                    previous_category=prev.actual_category,
+                    current_category=c.actual_category,
+                )
+            )
+        elif delta > 0:
+            score_improvements.append(
+                ScoreRegressionCase(
+                    case_id=c.case_id,
+                    input=c.input,
+                    previous_score=prev.summary_relevance_score,
+                    current_score=c.summary_relevance_score,
+                    score_delta=delta,
+                    previous_category=prev.actual_category,
+                    current_category=c.actual_category,
+                )
+            )
+
+        # Binary pass/fail flipped cases
         if prev.passed and not c.passed:
             regressions.append(
                 FlippedCase(
@@ -257,6 +295,8 @@ def compare_runs(
         for cat in set(current.category_accuracy) | set(previous.category_accuracy)
     }
 
+    avg_score_delta = (sum(score_deltas) / len(score_deltas)) if score_deltas else 0.0
+
     # Significance: a drop is only "signal" if it clears the threshold.
     # This stops a 1-2 case flip out of 80 from triggering a false alarm.
     abs_delta = abs(pass_rate_delta)
@@ -274,6 +314,9 @@ def compare_runs(
         category_accuracy_delta=category_accuracy_delta,
         regressions=regressions,
         improvements=improvements,
+        score_regressions=score_regressions,
+        score_improvements=score_improvements,
+        avg_score_delta=avg_score_delta,
         severity=severity,
         warning_threshold=warning_threshold,
         critical_threshold=critical_threshold,

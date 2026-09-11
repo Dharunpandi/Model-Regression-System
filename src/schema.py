@@ -168,6 +168,19 @@ class FlippedCase(BaseModel):
     current_category: Category
 
 
+class ScoreRegressionCase(BaseModel):
+    """A case where the numeric judge score degraded (delta < 0),
+    even if the case is still considered 'passing' in isolation (e.g. 4 -> 3)."""
+
+    case_id: str
+    input: str
+    previous_score: int
+    current_score: int
+    score_delta: int  # current_score - previous_score
+    previous_category: Category
+    current_category: Category
+
+
 class RunComparison(BaseModel):
     """The diff between two eval runs — this is the core output the
     Slack alert and HTML report are both built from."""
@@ -180,6 +193,10 @@ class RunComparison(BaseModel):
 
     regressions: list[FlippedCase]  # passed before, now fails
     improvements: list[FlippedCase]  # failed before, now passes
+
+    score_regressions: list[ScoreRegressionCase] = Field(default_factory=list)  # score delta < 0
+    score_improvements: list[ScoreRegressionCase] = Field(default_factory=list)  # score delta > 0
+    avg_score_delta: float = 0.0
 
     severity: str  # "ok" | "warning" | "critical"
     warning_threshold: float
